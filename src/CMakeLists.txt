@@ -4,6 +4,9 @@ if(MSVC)
   if(WITH_TEXTURE_GENERATOR OR WITH_FULL_RELEASE)
     include("CMakeProject-texture.cmake")
   endif()
+  if(WITH_NINE_OR_NULL OR WITH_FULL_RELEASE)
+    include("CMakeProject-nine-or-null.cmake")
+  endif()
 endif()
 
 if(CMAKE_GENERATOR STREQUAL "Xcode")
@@ -22,6 +25,7 @@ include(CMakeData-actor.cmake)
 include(CMakeData-screen.cmake)
 include(CMakeData-data.cmake)
 include(CMakeData-file-types.cmake)
+include(CMakeData-slap.cmake)
 include(CMakeData-globals.cmake)
 include(CMakeData-singletons.cmake)
 
@@ -34,7 +38,8 @@ list(APPEND SMDATA_ALL_FILES_SRC
             ${SMDATA_ALL_RAGE_SRC}
             ${SMDATA_ALL_SCREENS_SRC}
             ${SMDATA_OS_SRC}
-            ${SMDATA_FILE_TYPES_SRC})
+            ${SMDATA_FILE_TYPES_SRC}
+            ${SMDATA_SLAP_SRC})
 list(APPEND SMDATA_ALL_FILES_HPP
             ${SMDATA_GLOBAL_FILES_HPP}
             ${SMDATA_GLOBAL_SINGLETON_HPP}
@@ -44,7 +49,8 @@ list(APPEND SMDATA_ALL_FILES_HPP
             ${SMDATA_ALL_RAGE_HPP}
             ${SMDATA_ALL_SCREENS_HPP}
             ${SMDATA_OS_HPP}
-            ${SMDATA_FILE_TYPES_HPP})
+            ${SMDATA_FILE_TYPES_HPP}
+            ${SMDATA_SLAP_HPP})
 
 if(NOT APPLE)
   list(APPEND SMDATA_ALL_FILES_SRC "Main.cpp")
@@ -552,6 +558,11 @@ install(DIRECTORY "${SM_ROOT_DIR}/NoteSkins"
         DESTINATION "${SM_INSTALL_DESTINATION}")
 install(FILES "${SM_ROOT_DIR}/Songs/instructions.txt"
         DESTINATION "${SM_INSTALL_DESTINATION}/Songs")
+ 
+if(WITH_FULL_RELEASE OR WITH_NINE_OR_NULL)
+  install(FILES "${SM_PROGRAM_DIR}/nine-or-null.exe"
+          DESTINATION "${SM_FULL_INSTALLATION_PATH}")
+endif()
 
 if(WITH_CLUB_FANTASTIC)
   # Fetch ClubFantastic packs
