@@ -24,12 +24,14 @@ namespace Slap {
             @brief Configuration parameters for an FFT.
 
             @param sample_rate Samples per second (Hz) of the source signal.
+            @param max_src_signal Maximum value of the source signal.
             @param size_p2 One-sided length of the filter window, expressed as a power on 2.
             @param rate_reduction Reduce effective sample rate by spacing out samples pulled from the input signal by this multiplier.
             @param invert IFFT, instead of FFT.
             */
             FFTConfiguration(
                 float sample_rate,
+                float max_src_signal,
                 size_t size_p2 = 5,
                 size_t rate_reduction = 1,
                 bool invert = false
@@ -54,11 +56,28 @@ namespace Slap {
             size_t length() const;
 
 
+            /**
+            @brief Convert a specified time in seconds to source sample index.
+
+            @return The index of the closest sample to the specified time in seconds.
+            */
+            size_t index(double time) const;
+
+
+            /**
+            @brief Convert a specified source sample index to time in seconds.
+
+            @return Time in seconds at the specified source sample index.
+            */
+            double time(size_t index) const;
+
+
             const Window& window() const {return window_;}
             size_t size_p2() const {return size_p2_;}
             float sample_rate() const {return sample_rate_;}
-            size_t rate_reduction() const {}
-            bool invert() const;
+            float max_src_signal() const {return max_src_signal_;}
+            size_t rate_reduction() const {return rate_reduction_;}
+            bool invert() const {return invert_;}
 
         protected:
             Window window_;             /**< Vector storage for the filter window */
@@ -66,6 +85,7 @@ namespace Slap {
 
             size_t size_p2_;            /**< One-sided length of the filter window as a power on 2 */
             float sample_rate_;         /**< Samples per second (Hz) of the source signal */
+            float max_src_signal_;      /**< Maximum value of the source signal. */
             size_t rate_reduction_;     /**< Spacing introduced between samples used in the FFT */
             bool invert_;               /**< IFFT, instead of FFT */
     };
@@ -95,7 +115,7 @@ namespace Slap {
             */
             void fft(
                 Signal& dst,
-                size_t center_index,
+                size_t center_index
             );
 
             /**
@@ -129,7 +149,7 @@ namespace Slap {
             */
             void fft_internal(
                 Signal& dst,
-                size_t center_index,
+                size_t center_index
             );
 
             FFTConfiguration config_;           /**< Configuration parameters */

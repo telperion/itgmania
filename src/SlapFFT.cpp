@@ -1,3 +1,6 @@
+#include "global.h"
+#include "SlapFFT.h"
+
 #include <cmath>
 #include <complex>
 #include <list>
@@ -6,15 +9,16 @@
 #include <unordered_map>
 #include <iostream>
 
-#include "SlapFFT.h"
 
 namespace Slap {
     FFTConfiguration::FFTConfiguration(
         float sample_rate,
+        float max_src_signal,
         size_t size_p2,
         size_t rate_reduction,
         bool invert
     ) : sample_rate_(sample_rate),
+        max_src_signal_(max_src_signal),
         size_p2_(size_p2),
         rate_reduction_(rate_reduction),
         invert_(invert) {
@@ -30,14 +34,29 @@ namespace Slap {
         frequency_.reserve(length + 1);
         for (size_t i = 0; i <= length; ++i) {
             if (i <= length / 2) {
-                return i * delta_f;
+                frequency_.push_back(i * delta_f);
             }
-            return (length - i) * delta_f;
+            frequency_.push_back((length - i) * delta_f);
         }
     }
 
     size_t FFTConfiguration::length() const {
         return (2 << size_p2_) + 1;
+    }
+
+    size_t FFTConfiguration::index(double time) const {
+        double index = time * sample_rate_ + 0.5;
+        if (index < 0) {
+            return 0;
+        }
+        // else if (index > src_.size()) {
+        //     return src_.size();
+        // }
+        return size_t(index);
+    }
+
+    double FFTConfiguration::time(size_t index) const {
+        return double(index) / sample_rate_;
     }
 
 
@@ -85,21 +104,21 @@ namespace Slap {
         for (size_t i = 0; i < dst_window_length; ++i) {
             size_t bit_reversed = bit_reversal(i, config_.size_p2());
             dst.push_back(at_or(
-                src, 
+                src_, 
                 bit_reversed * config_.rate_reduction() + window_offset, 
                 CC(0.0f)
-            ) * window[bit_reversed]);
+            ) * config_.window()[bit_reversed]);
         }
         dst.push_back(at_or(
-            src,
+            src_,
             src_window_length + window_offset,
             CC(0.0f)
-        ) * window[dst_window_length]);
+        ) * config_.window()[dst_window_length]);
 
         // Set up the butterfly transform using stride lengths.
         for (size_t stride = 2; stride <= dst_window_length; stride <<= 1) {
             size_t half_stride = stride / 2;
-            float theta = (TAU / stride) * (invert ? -1 : 1);
+            float theta = (TAU / stride) * (config_.invert() ? -1 : 1);
             CC unity(std::cosf(theta), std::sinf(theta));
             for (size_t i = 0; i < dst_window_length; i += stride) {
                 CC winding(1);
@@ -116,7 +135,7 @@ namespace Slap {
         }
 
         // Scaling when applying the IFFT.
-        if (invert) {
+        if (config_.invert()) {
             for (CC &x : dst) {
                 x /= dst_window_length;
             }
@@ -147,8 +166,9 @@ namespace Slap {
 
             // Kick something out of the cache if necessary.
             if (cache_size() >= cache_size_max()) {
-                auto cache_oldest = cache_.pop_back();
+                auto cache_oldest = cache_.back();
                 cache_lookup_.erase(cache_oldest.first);
+                cache_.pop_back();
             }
 
             // Insert the FFT result at the front of the cache.
@@ -160,21 +180,29 @@ namespace Slap {
     }
 
     size_t FFT::cache_size_max() const {
-        return (2 << cache_size_p2);
+        return (2 << cache_size_p2_);
     }
 
     size_t FFT::cache_size() const {
         return cache_.size();
     }
 
-    size_t FFT::cache_diag() const {
+    void FFT::cache_diag() const {
         std::cout << "Cache:" << std::endl;
         for (const auto& it : cache_) {
-            std::cout << "\t" << it.first << ": " << it.second << std::endl;
+            std::cout << "\t" << it.first << ": ";
+            for (const auto& v : it.second) {
+                std::cout << v << ", ";
+            }
+            std::cout << std::endl;
         }
         std::cout << "Cache Lookup:" << std::endl;
         for (const auto& it : cache_lookup_) {
-            std::cout << "\t" << it.first << ": " << it.second << std::endl;
+            std::cout << "\t" << it.first << ": (" << it.second->first << " -> ";
+            for (const auto& v : it.second->second) {
+                std::cout << v << ", ";
+            }
+            std::cout << ")" << std::endl;
         }
     }
 }

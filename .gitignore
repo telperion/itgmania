@@ -106,3 +106,5 @@ BuildLog.htm
 *.pc
 *.d
 *.lastcodeanalysissucceeded
+*.idx
+*.code-workspace

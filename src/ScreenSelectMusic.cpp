@@ -2019,7 +2019,11 @@ void ScreenSelectMusic::AfterMusicChange()
 		// now we can just load the video file directly. This is to try an address
 		// some issues with the video banners potentially crashing the game but
 		// needs some more investigation.
-		if( IsVideoFile(g_sBannerPath) )
+		if (false) { // _SUBSTITUTE_SPECTROGRAM_FOR_BANNER
+			Song* pSong = m_MusicWheel.GetSelectedSong();
+			m_Banner.LoadFromSpectrogram(pSong->GetSongFilePath());
+		}
+		else if( IsVideoFile(g_sBannerPath) )
 		{
 			// Directly load the video file.
 			m_Banner.LoadFromCachedBanner(g_sBannerPath);

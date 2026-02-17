@@ -164,6 +164,57 @@ bool FadingBanner::LoadFromCachedBanner( const RString &path )
 	return bLowRes;
 }
 
+bool FadingBanner::LoadFromSpectrogram( const RString &path )
+{
+	// If we're already on the given banner, don't fade again.
+	if( path != "" && m_Banner[m_iIndexLatest].GetTexturePath() == path )
+		return false;
+
+	if( path == "" )
+	{
+		LoadFallback();
+		return false;
+	}
+
+	/* If we're currently fading to the given banner, go through this again,
+	 * which will cause the fade-in to be further delayed. */
+
+	RageTextureID ID;
+	bool bLowRes = (PREFSMAN->m_ImageCache != IMGCACHE_FULL);
+	if( !bLowRes )
+	{
+		ID = Sprite::SongBannerTexture( path );
+	}
+	else
+	{
+		// Try to load the low quality version.
+		ID = IMAGECACHE->LoadCachedImage( "Banner", path );
+	}
+
+	if( !TEXTUREMAN->IsTextureRegistered(ID) )
+	{
+		/* Oops. We couldn't load a banner quickly. We can load the actual
+		 * banner, but that's slow, so we don't want to do that when we're moving
+		 * fast on the music wheel. In that case, we should just keep the banner
+		 * that's there (or load a "moving fast" banner). Once we settle down,
+		 * we'll get called again and load the real banner. */
+
+		if( m_bMovingFast )
+			return false;
+
+		if( IsAFile(path) )
+			Load( path );
+		else
+			LoadFallback();
+
+		return false;
+	}
+
+	Load( ID );
+
+	return bLowRes;
+}
+
 void FadingBanner::LoadFromSong( const Song* pSong )
 {
 	if( pSong == nullptr )

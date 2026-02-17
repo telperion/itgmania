@@ -51,6 +51,7 @@ list(APPEND SMDATA_ALL_FILES_HPP
             ${SMDATA_OS_HPP}
             ${SMDATA_FILE_TYPES_HPP}
             ${SMDATA_SLAP_HPP})
+list(APPEND SMLIB_ALL_FILES_SRC ${SMDATA_ALL_FILES_SRC})
 
 if(NOT APPLE)
   list(APPEND SMDATA_ALL_FILES_SRC "Main.cpp")
@@ -366,6 +367,26 @@ list(APPEND SMDATA_LINK_LIB "mad"
                             "ixwebsocket"
 							"hidapi")
 
+function(link_ffmpeg_libs target)
+  sm_add_link_flag("${target}" "/LIBPATH:\"${SM_EXTERN_DIR}/ffmpeg-w32/${SM_WIN32_ARCH}\"")
+  sm_add_link_flag("${target}"
+                  "/LIBPATH:\"$(WindowsSdkDir)Lib\\um\\${SM_WIN32_ARCH}\"")
+  sm_add_link_flag("${target}" "/ERRORREPORT:SEND")
+  sm_add_link_flag("${target}" "/MAPINFO:EXPORTS")
+  sm_add_link_flag("${target}" "/SAFESEH:NO")
+  sm_add_link_flag("${target}" "/NOLOGO")
+  sm_add_link_flag("${target}" "/MAP")
+  sm_add_link_flag("${target}" "/NODEFAULTLIB:wininet.lib")
+  sm_add_link_flag("${target}" "/NODEFAULTLIB:msimg32.lib")
+  sm_add_link_flag("${target}" "/NODEFAULTLIB:libci.lib")
+  set_target_properties("${target}"
+                        PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB:msvcrt.lib")
+  set_target_properties("${target}"
+                        PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
+  set_target_properties("${target}"
+                        PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
+endfunction()
+
 if(WIN32)
   list(APPEND SMDATA_LINK_LIB
               # The misc libraries are here.
@@ -379,24 +400,7 @@ if(WIN32)
               "setupapi.lib"
               "hid.lib")
 
-  sm_add_link_flag("${SM_EXE_NAME}" "/LIBPATH:\"${SM_EXTERN_DIR}/ffmpeg-w32/${SM_WIN32_ARCH}\"")
-  sm_add_link_flag("${SM_EXE_NAME}"
-                   "/LIBPATH:\"$(WindowsSdkDir)Lib\\um\\${SM_WIN32_ARCH}\"")
-  sm_add_link_flag("${SM_EXE_NAME}" "/ERRORREPORT:SEND")
-  sm_add_link_flag("${SM_EXE_NAME}" "/MAPINFO:EXPORTS")
-  sm_add_link_flag("${SM_EXE_NAME}" "/SAFESEH:NO")
-  sm_add_link_flag("${SM_EXE_NAME}" "/NOLOGO")
-  sm_add_link_flag("${SM_EXE_NAME}" "/MAP")
-  sm_add_link_flag("${SM_EXE_NAME}" "/NODEFAULTLIB:wininet.lib")
-  sm_add_link_flag("${SM_EXE_NAME}" "/NODEFAULTLIB:msimg32.lib")
-  sm_add_link_flag("${SM_EXE_NAME}" "/NODEFAULTLIB:libci.lib")
-  set_target_properties("${SM_EXE_NAME}"
-                        PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB:msvcrt.lib")
-  set_target_properties("${SM_EXE_NAME}"
-                        PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
-  set_target_properties("${SM_EXE_NAME}"
-                        PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
-
+  link_ffmpeg_libs("${SM_EXE_NAME}")
 elseif(APPLE)
   list(INSERT SMDATA_LINK_LIB
               0
@@ -580,3 +584,96 @@ if(WITH_CLUB_FANTASTIC)
   install(DIRECTORY "${CLUB_FANTASTIC_DIR}/Club Fantastic Season 2"
           DESTINATION "${SM_INSTALL_DESTINATION}/Songs")
 endif()
+
+
+# Unit tests
+include(CMakeData-slap.cmake)
+include(CMakeData-rage.cmake)
+
+set(UNIT_TEST_DIR "${SM_SRC_DIR}/tests")
+
+list(APPEND UNIT_TEST_SRC
+            "${UNIT_TEST_DIR}/test_slap_fft.cpp"
+            "${UNIT_TEST_DIR}/test_slap.cpp"
+            "${UNIT_TEST_DIR}/test_slap_analysis.cpp"
+            )
+
+source_group("Unit Test Sources" FILES ${UNIT_TEST_SRC})
+
+list(APPEND DEPENDENCIES_SRC
+  ${SMDATA_ALL_RAGE_SRC}
+  ${SMDATA_SLAP_SRC})
+
+list(APPEND DEPENDENCIES_HPP
+  ${SMDATA_ALL_RAGE_HPP}
+  ${SMDATA_SLAP_HPP})
+
+# Debug: Uncomment to inspect variables
+message(STATUS "SMDATA_LINK_LIB = ${SMDATA_LINK_LIB}")
+list(LENGTH SMDATA_LINK_LIB linked_libs_len)
+message(STATUS "SMDATA_LINK_LIB has ${linked_libs_len} items")
+
+# GoogleTest (for SLAP & nine-or-null)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+add_subdirectory(../extern/googletest extern/googletest EXCLUDE_FROM_ALL)
+enable_testing()
+
+# Unit testing
+# Include Slap source files and global.cpp for precompiled headers
+add_executable(
+  test_slap_fft
+  global.cpp
+  ${SMLIB_ALL_FILES_SRC}
+  ${SMDATA_ALL_FILES_HPP}
+  tests/test_slap_fft.cpp
+)
+set_property(TARGET test_slap_fft PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_slap_fft PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET test_slap_fft PROPERTY CXX_EXTENSIONS ON)
+
+target_compile_definitions(test_slap_fft PRIVATE WINDOWS)
+target_compile_definitions(test_slap_fft PRIVATE _WINDOWS) # TODO: Remove this potential duplicate.
+target_compile_definitions(test_slap_fft PRIVATE _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(test_slap_fft PRIVATE _WINSOCK_DEPRECATED_NO_WARNINGS)
+set_target_properties(test_slap_fft
+                      PROPERTIES COMPILE_FLAGS "${SM_COMPILE_FLAGS}")
+
+# Configure precompiled headers for MSVC (same as main executable)
+if(MSVC)
+  # Set global.cpp to create the precompiled header
+  set_source_files_properties("global.cpp"
+                              PROPERTIES
+                              COMPILE_FLAGS
+                              "/Ycglobal.h")
+  
+  # Set other source files to use the precompiled header
+  foreach(sm_src_file ${DEPENDENCIES_SRC})
+    set_source_files_properties("${sm_src_file}"
+                                PROPERTIES
+                                COMPILE_FLAGS
+                                "/Yuglobal.h")
+  endforeach()
+endif()
+
+target_include_directories(
+  test_slap_fft
+  PUBLIC
+  ${SM_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/extern/googletest/googletest/include
+)
+target_link_directories(
+  test_slap_fft
+  PRIVATE
+  ${SM_INCLUDE_DIRS}
+  ${CMAKE_BINARY_DIR}/extern/googletest
+)
+target_link_libraries(
+  test_slap_fft
+  ${SMDATA_LINK_LIB}
+  GTest::gtest_main
+)
+link_ffmpeg_libs(test_slap_fft)
+# add_test(NAME test_slap_fft COMMAND test_slap_fft)
+
+include(GoogleTest)
+gtest_discover_tests(test_slap_fft)
