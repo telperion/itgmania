@@ -30,13 +30,15 @@ namespace Slap {
         }
 
         // Generate the frequency axis corresponding to this configuration.
-        float delta_f = sample_rate_ / (2.0f * rate_reduction_ * length);
+        float delta_f = sample_rate_ / (rate_reduction_ * length);
         frequency_.reserve(length + 1);
         for (size_t i = 0; i <= length; ++i) {
             if (i <= length / 2) {
                 frequency_.push_back(i * delta_f);
             }
-            frequency_.push_back((length - i) * delta_f);
+            else {
+                frequency_.push_back((length - i) * delta_f);
+            }
         }
     }
 
@@ -94,15 +96,15 @@ namespace Slap {
         size_t center_index
     ) {
         // How many steps of butterfly transform to perform?
-        auto dst_window_length = 2 << config_.size_p2();
-        auto src_window_length = dst_window_length * config_.rate_reduction();
-        auto window_offset = center_index - src_window_length / 2;
+        size_t dst_window_length = 2 << config_.size_p2();
+        size_t src_window_length = dst_window_length * config_.rate_reduction();
+        size_t window_offset = center_index - src_window_length / 2;
 
         // Prepare the elements in the window for the transform.
         dst.clear();
         dst.reserve(dst_window_length + 1);
         for (size_t i = 0; i < dst_window_length; ++i) {
-            size_t bit_reversed = bit_reversal(i, config_.size_p2());
+            size_t bit_reversed = bit_reversal(i, config_.size_p2() + 1);
             dst.push_back(at_or(
                 src_, 
                 bit_reversed * config_.rate_reduction() + window_offset, 
@@ -122,7 +124,7 @@ namespace Slap {
             CC unity(std::cosf(theta), std::sinf(theta));
             for (size_t i = 0; i < dst_window_length; i += stride) {
                 CC winding(1);
-                for (int j = 0; j < half_stride; ++j) {
+                for (size_t j = 0; j < half_stride; ++j) {
                     size_t butter_index = i + j;
                     size_t fly_index = i + j + half_stride;
                     CC butter(dst[butter_index]);
@@ -180,7 +182,7 @@ namespace Slap {
     }
 
     size_t FFT::cache_size_max() const {
-        return (2 << cache_size_p2_);
+        return (1 << cache_size_p2_);
     }
 
     size_t FFT::cache_size() const {
