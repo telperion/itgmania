@@ -4,7 +4,7 @@
 #include <ios>
 #include <iostream>
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 
 namespace Slap {
 namespace {
@@ -56,6 +56,10 @@ TEST(SlapFFTTest, CheckWindowCalculation) {
     EXPECT_EQ(config.frequency()[1 << 4], 0);       // TODO
     EXPECT_NEAR(config.frequency()[0], 1, 1e-6);    // TODO
 };
+
+TEST(SlapFFTTest, Teapot) {
+    EXPECT_EQ(7 * 6, 42);
+}
 
 } // anonymous namespace
 } // namespace Slap

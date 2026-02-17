@@ -630,6 +630,18 @@ add_executable(
 set_property(TARGET test_slap_fft PROPERTY CXX_STANDARD 17)
 set_property(TARGET test_slap_fft PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET test_slap_fft PROPERTY CXX_EXTENSIONS ON)
+set_target_properties(test_slap_fft
+  PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+    "${SM_BUILD_DIR}/tests"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE
+    "${SM_BUILD_DIR}/tests"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG
+    "${SM_BUILD_DIR}/tests"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL
+    "${SM_BUILD_DIR}/tests"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO
+    "${SM_BUILD_DIR}/tests"
+)
 
 target_compile_definitions(test_slap_fft PRIVATE WINDOWS)
 target_compile_definitions(test_slap_fft PRIVATE _WINDOWS) # TODO: Remove this potential duplicate.
@@ -637,23 +649,6 @@ target_compile_definitions(test_slap_fft PRIVATE _CRT_SECURE_NO_WARNINGS)
 target_compile_definitions(test_slap_fft PRIVATE _WINSOCK_DEPRECATED_NO_WARNINGS)
 set_target_properties(test_slap_fft
                       PROPERTIES COMPILE_FLAGS "${SM_COMPILE_FLAGS}")
-
-# Configure precompiled headers for MSVC (same as main executable)
-if(MSVC)
-  # Set global.cpp to create the precompiled header
-  set_source_files_properties("global.cpp"
-                              PROPERTIES
-                              COMPILE_FLAGS
-                              "/Ycglobal.h")
-  
-  # Set other source files to use the precompiled header
-  foreach(sm_src_file ${DEPENDENCIES_SRC})
-    set_source_files_properties("${sm_src_file}"
-                                PROPERTIES
-                                COMPILE_FLAGS
-                                "/Yuglobal.h")
-  endforeach()
-endif()
 
 target_include_directories(
   test_slap_fft
@@ -667,13 +662,29 @@ target_link_directories(
   ${SM_INCLUDE_DIRS}
   ${CMAKE_BINARY_DIR}/extern/googletest
 )
+link_ffmpeg_libs(test_slap_fft)
 target_link_libraries(
   test_slap_fft
   ${SMDATA_LINK_LIB}
   GTest::gtest_main
 )
-link_ffmpeg_libs(test_slap_fft)
-# add_test(NAME test_slap_fft COMMAND test_slap_fft)
 
 include(GoogleTest)
-gtest_discover_tests(test_slap_fft)
+# add_test(NAME test_slap_fft COMMAND test_slap_fft)
+
+# gtest_add_tests(
+#   TARGET test_slap_fft
+#   SOURCES tests/test_slap_fft.cpp
+#   WORKING_DIRECTORY ${SM_BUILD_DIR}/tests
+#   SKIP_DEPENDENCY
+#   TEST_LIST tests_found
+# )
+
+# message(STATUS "tests_found = ${tests_found}")
+# list(LENGTH tests_found tests_len)
+# message(STATUS "tests_found has ${tests_len} items")
+
+gtest_discover_tests(
+  test_slap_fft
+  WORKING_DIRECTORY ${SM_BUILD_DIR}/tests
+)
