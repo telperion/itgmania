@@ -15,6 +15,7 @@
 #include "TimingData.h"
 #include "GameInput.h"
 #include "OptionsList.h"
+#include "SlapVisualInterfaces.h"
 
 #include <vector>
 
@@ -156,6 +157,8 @@ protected:
 	bool			m_bAllowOptionsMenu, m_bAllowOptionsMenuRepeat;
 	bool			m_bSelectIsDown[NUM_PLAYERS];
 	bool			m_bAcceptSelectRelease[NUM_PLAYERS];
+
+	Slap::SlapSpectrogramCache	m_SpectrogramBanner;
 
 	RageSound		m_soundStart;
 	RageSound		m_soundDifficultyEasier;

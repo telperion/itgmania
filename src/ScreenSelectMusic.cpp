@@ -62,6 +62,7 @@ static bool g_bWantFallbackCdTitle;
 static bool g_bCDTitleWaiting = false;
 static RString g_sBannerPath;
 static bool g_bBannerWaiting = false;
+static bool g_bSpectrogramWaiting = false;
 static bool g_bSampleMusicWaiting = false;
 static RageTimer g_StartedLoadingAt(RageZeroTimer);
 static RageTimer g_ScreenStartedLoadingAt(RageZeroTimer);
@@ -333,7 +334,21 @@ void ScreenSelectMusic::CheckBackgroundRequests( bool bForce )
 	if( !m_MusicWheel.IsSettled() && !m_MusicWheel.WheelIsLocked() && !bForce )
 		return;
 
-	if( g_bBannerWaiting )
+	if (g_bSpectrogramWaiting)
+	{
+		Song* pSong = m_MusicWheel.GetSelectedSong();
+		if (pSong) {
+			m_SpectrogramBanner.LoadMusic(pSong->GetPreviewMusicPath());
+			m_SpectrogramBanner.Update(
+				pSong->GetPreviewStartSeconds(), 
+				pSong->GetPreviewStartSeconds() + m_fSampleLengthSeconds,
+				 m_fSampleLengthSeconds / 418.0
+			);
+		}
+		m_Banner.Load(m_SpectrogramBanner.GetTexture()->GetID());
+		g_bSpectrogramWaiting = false;
+	}
+	else if( g_bBannerWaiting )
 	{
 		if( m_Banner.GetTweenTimeLeft() > 0 )
 			return;
@@ -2019,9 +2034,9 @@ void ScreenSelectMusic::AfterMusicChange()
 		// now we can just load the video file directly. This is to try an address
 		// some issues with the video banners potentially crashing the game but
 		// needs some more investigation.
-		if (false) { // _SUBSTITUTE_SPECTROGRAM_FOR_BANNER
-			Song* pSong = m_MusicWheel.GetSelectedSong();
-			m_Banner.LoadFromSpectrogram(pSong->GetSongFilePath());
+		if (PREFSMAN->m_bSubstituteSpectrogramForBanner.Get()) {
+			g_bSpectrogramWaiting = true;
+			LOG->Trace("Loading spectrogram instead of banner for %s", g_sBannerPath.c_str());
 		}
 		else if( IsVideoFile(g_sBannerPath) )
 		{

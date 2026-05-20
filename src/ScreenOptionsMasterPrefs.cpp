@@ -936,6 +936,7 @@ static void InitializeConfOptions()
 	ADD( ConfOption( "FastNoteRendering", MovePref<bool>, "Off", "On"));
 	ADD( ConfOption( "ShowStats",			MovePref<bool>,		"Off","On" ) );
 	ADD( ConfOption( "ShowBanners",			MovePref<bool>,		"Off","On" ) );
+	ADD( ConfOption( "SubstituteSpectrogramForBanner", MovePref<bool>, "Off", "On" ) );
 
 	// Sound options
 	ADD( ConfOption( "AttractSoundFrequency",	MovePref<AttractSoundFrequency>, "Never","Always","2 Times","3 Times","4 Times","5 Times" ) );
